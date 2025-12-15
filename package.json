@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "dev",
-    "start": "npx nodemon src/index.js"
+    "start": "node src/index.js"
   },
   "author": "ayush",
   "license": "ISC",
