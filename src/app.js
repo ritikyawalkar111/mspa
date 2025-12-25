@@ -39,7 +39,7 @@ app.use('/api/tests', testRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/users', userRoutes);
 app.use('/uploads', express.static('uploads'));
-
+app.use('/api/dashboard', dashboardRoutes);
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
