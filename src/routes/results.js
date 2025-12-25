@@ -46,7 +46,7 @@ router.get('/:id', auth, async (req, res) => {
         }
 
 
-if (req.user.role === 'student') {
+    if (req.user.role === 'student') {
             const testEndTime = new Date(result.test.endTime); // make sure your Test model has endTime
             const now = new Date();
 
