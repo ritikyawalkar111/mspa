@@ -45,7 +45,7 @@ export const getActiveTests = async (req, res) => {
 
         const tests = await Test.find({
             createdBy: { $in: enrolled },
-            isActive: true,
+            //isActive: true,
             startTime: { $lte: now },
             endTime: { $gt: now }
         })
