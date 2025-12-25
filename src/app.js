@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
-
+import dashboardRoutes from './routes/dashboard.js';
 import testRoutes from './routes/tests.js';
 import resultRoutes from './routes/results.js';
 import userRoutes from './routes/users.js';
