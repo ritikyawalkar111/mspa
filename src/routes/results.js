@@ -46,8 +46,13 @@ router.get('/:id', auth, async (req, res) => {
         }
 
 
-        if (req.user.role === 'student') {
-            return res.status(403).json({ message: 'Access denied. Only teachers can view detailed results.' });
+if (req.user.role === 'student') {
+            const testEndTime = new Date(result.test.endTime); // make sure your Test model has endTime
+            const now = new Date();
+
+            if (now < testEndTime) {
+                return res.status(403).json({ message: 'Test is still ongoing. Results are not available yet.' });
+            }
         }
 
         res.json(result);
