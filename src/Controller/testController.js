@@ -49,14 +49,15 @@ export const getActiveTests = async (req, res) => {
             startTime: { $lte: now },
             endTime: { $gt: now }
         })
-        .populate('createdBy', 'name')
-        .select('title description duration createdAt startTime endTime');
+            .populate('createdBy', 'name')
+            .select('title description duration createdAt startTime endTime');
 
         res.json(tests);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
 
 export const getTestById = async (req, res) => {
     try {
