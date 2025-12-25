@@ -31,27 +31,25 @@ export const getMyTests = async (req, res) => {
 
 export const getActiveTests = async (req, res) => {
     try {
-        let query = { isActive: true };
-
-
-        // API is intended for students only. If not student, return empty.
-        if (req.user.role !== 'student') {
-
+        if (!req.user || req.user.role !== 'student') {
             return res.json([]);
         }
-
 
         const enrolled = req.user.enrolledTeachers || [];
-
         if (enrolled.length === 0) {
-
             return res.json([]);
         }
-        query.createdBy = { $in: enrolled };
 
-        const tests = await Test.find(query)
-            .populate('createdBy', 'name')
-            .select('title description duration createdAt');
+        const now = new Date();
+
+        const tests = await Test.find({
+            createdBy: { $in: enrolled },
+            isActive: true,
+            startTime: { $lte: now },
+            endTime: { $gt: now }
+        })
+        .populate('createdBy', 'name')
+        .select('title description duration createdAt startTime endTime');
 
         res.json(tests);
     } catch (error) {
