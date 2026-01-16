@@ -117,7 +117,7 @@ router.get('/:testId', auth, requireTeacher, async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
-router.get('/:studentId', auth, requireStudent, async (req, res) => {
+router.get('/student/:studentId', auth, requireStudent, async (req, res) => {
     try {
         const { studentId } = req.params;
 
