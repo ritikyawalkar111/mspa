@@ -41,12 +41,13 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+console.log("starte");
 /* ---------- ROUTES ---------- */
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
-app.use('/api/tests', testRoutes);
+app.use('/api/tests', auth, testRoutes);
 app.use('/api/results', resultRoutes);
-app.use('/api/teacher', auth, userRoutes);
+app.use('/api/user', auth, userRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use("/api/dashboard", dash);
 

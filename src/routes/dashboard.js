@@ -40,7 +40,7 @@ router.get('/teacher/:testId/dash', auth, requireTeacher, async (req, res) => {
             {
                 $project: {
                     result_id: "$_id",
-                    // result: $_id,
+                    result: "$autoSubmitted",
                     _id: 0,
                     studentName: "$student.name",
                     email: "$student.email",
@@ -208,6 +208,7 @@ router.get('/teacher/:testId/dash', auth, requireTeacher, async (req, res) => {
         res.status(500).json({ message: "Dashboard analytics failed" });
     }
 });
+
 router.get('/student/:studentId', auth, requireStudent, async (req, res) => {
     try {
         console.log("inside stu-das");

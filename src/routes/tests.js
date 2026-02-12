@@ -10,296 +10,7 @@ import {
     deleteTest,
     publishTest
 } from '../Controller/testController.js';
-// import { auth, requireTeacher, requireStudent } from '../middlewares/auth.js';
-// import { validateTest } from '../middlewares/validation.js';
-// import Test from '../models/Test.js';
-// import Question from '../models/Question.js';
-// import Result from '../models/Result.js';
-
-// const router = express.Router();
-
-
-// router.post('/', auth, requireTeacher, validateTest, async (req, res) => {
-//     try {
-//         const test = new Test({
-//             ...req.body,
-//             createdBy: req.user.id
-//         });
-
-//         await test.save();
-//         await test.populate('questions');
-//         res.status(201).json(test);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-// router.get('/my-tests', auth, requireTeacher, async (req, res) => {
-//     try {
-//         const tests = await Test.find({ createdBy: req.user.id })
-//             .populate('questions')
-//             .sort({ createdAt: -1 });
-
-//         res.json(tests);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-
-
-// router.get('/:id', auth, async (req, res) => {
-//     try {
-//         const test = await Test.findById(req.params.id).populate('questions');
-
-//         if (!test) {
-//             return res.status(404).json({ message: 'Test not found' });
-//         }
-
-
-//         if (req.user.role === 'student') {
-//             if (!test.isActive) {
-//                 return res.status(403).json({ message: 'Test is not active' });
-//             }
-
-//             const testWithoutAnswers = {
-//                 _id: test._id,
-//                 title: test.title,
-//                 description: test.description,
-//                 duration: test.duration,
-//                 questions: test.questions.map(q => ({
-//                     _id: q._id,
-//                     questionText: q.questionText,
-//                     options: q.options.map(opt => ({ text: opt.text })),
-//                     questionType: q.questionType,
-//                     marks: q.marks
-//                 }))
-//             };
-//             return res.json(testWithoutAnswers);
-//         }
-
-//         res.json(test);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-// router.post('/:id/start', auth, requireStudent, async (req, res) => {
-//     try {
-//         const test = await Test.findById(req.params.id);
-
-//         if (!test || !test.isActive) {
-//             return res.status(404).json({ message: 'Test not found or inactive' });
-//         }
-
-
-//         const existingResult = await Result.findOne({
-//             test: test._id,
-//             student: req.user.id
-//         });
-
-//         if (existingResult) {
-//             if (existingResult.submittedAt) {
-//                 return res.status(400).json({ message: 'Test already attempted' });
-//             }
-
-//             // Resume Test
-//             return res.json({
-//                 testId: test._id,
-//                 duration: test.duration,
-//                 totalQuestions: test.questions.length,
-//                 totalMarks: existingResult.totalMarks,
-//                 startTime: existingResult.createdAt, // Use original start time
-//                 isResumed: true
-//             });
-//         }
-
-
-//         const questions = await Question.find({ _id: { $in: test.questions } });
-//         const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
-
-
-//         const result = new Result({
-//             test: test._id,
-//             student: req.user.id,
-//             totalMarks,
-//             answers: test.questions.map(questionId => ({
-//                 question: questionId
-//             }))
-//         });
-
-//         await result.save();
-
-//         res.json({
-//             testId: test._id,
-//             duration: test.duration,
-//             totalQuestions: test.questions.length,
-//             totalMarks,
-//             startTime: result.createdAt
-//         });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-// router.post('/:id/submit', auth, requireStudent, async (req, res) => {
-//     try {
-//         const { answers, timeTaken, autoSubmitted = false } = req.body;
-//         const test = await Test.findById(req.params.id);
-
-//         if (!test) {
-//             return res.status(404).json({ message: 'Test not found' });
-//         }
-
-
-//         let result = await Result.findOne({
-//             test: test._id,
-//             student: req.user.id
-//         }).populate('answers.question');
-
-//         if (!result) {
-//             return res.status(400).json({ message: 'Test not started' });
-//         }
-
-//         if (result.submittedAt) {
-//             return res.status(400).json({ message: 'Test already submitted' });
-//         }
-
-
-//         let score = 0;
-//         const updatedAnswers = await Promise.all(
-//             answers.map(async (answer) => {
-//                 const question = await Question.findById(answer.questionId).select('+correctAnswer');
-//                 if (!question) return null;
-
-//                 let isCorrect = false;
-//                 if (question.questionType === 'fill_in_blank') {
-
-//                     isCorrect = answer.textAnswer &&
-//                         question.correctAnswer &&
-//                         answer.textAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
-//                 } else {
-
-//                     isCorrect = question.options[answer.selectedOption]?.isCorrect || false;
-//                 }
-
-//                 if (isCorrect) {
-//                     score += question.marks;
-//                 }
-
-//                 return {
-//                     question: answer.questionId,
-//                     selectedOption: answer.selectedOption,
-//                     textAnswer: answer.textAnswer,
-//                     isCorrect
-//                 };
-//             })
-//         );
-
-
-//         const validAnswers = updatedAnswers.filter(answer => answer !== null);
-
-
-//         result.answers = validAnswers;
-//         result.score = score;
-//         result.percentage = (score / result.totalMarks) * 100;
-//         result.timeTaken = timeTaken;
-//         result.autoSubmitted = autoSubmitted;
-//         result.submittedAt = new Date();
-
-//         await result.save();
-
-//         res.json({
-//             message: 'Test submitted successfully'
-//         });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-// router.put('/:id', auth, requireTeacher, async (req, res) => {
-//     try {
-//         const test = await Test.findById(req.params.id);
-
-//         if (!test) {
-//             return res.status(404).json({ message: 'Test not found' });
-//         }
-
-//         // Check ownership
-//         // Check ownership (if test has an owner)
-//         if (test.createdBy && test.createdBy.toString() !== req.user.id) {
-//             return res.status(403).json({ message: 'Not authorized to update this test' });
-//         }
-
-//         const updatedTest = await Test.findByIdAndUpdate(
-//             req.params.id,
-//             req.body,
-//             { new: true, runValidators: true }
-//         ).populate('questions');
-
-//         res.json(updatedTest);
-//     } catch (error) {
-//         console.error('Error in PUT /tests/:id:', error);
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-
-// router.delete('/:id', auth, requireTeacher, async (req, res) => {
-//     try {
-//         const test = await Test.findById(req.params.id);
-
-//         if (!test) {
-//             return res.status(404).json({ message: 'Test not found' });
-//         }
-
-//         // Check ownership
-//         // Check ownership (if test has an owner)
-//         if (test.createdBy && test.createdBy.toString() !== req.user.id) {
-//             return res.status(403).json({ message: 'Not authorized to delete this test' });
-//         }
-
-//         await Test.findByIdAndDelete(req.params.id);
-//         await Result.deleteMany({ test: req.params.id });
-
-//         res.json({ message: 'Test deleted successfully' });
-//     } catch (error) {
-//         console.error('Error in DELETE /tests/:id:', error);
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-// router.put('/:id/publish', auth, requireTeacher, async (req, res) => {
-//     try {
-//         const test = await Test.findById(req.params.id);
-
-//         if (!test) {
-//             return res.status(404).json({ message: 'Test not found' });
-//         }
-
-//         // Check ownership
-//         if (test.createdBy && test.createdBy.toString() !== req.user.id) {
-//             return res.status(403).json({ message: 'Not authorized to publish this test' });
-//         }
-
-//         test.isActive = true;
-//         await test.save();
-
-//         res.json({ message: 'Test published successfully', test });
-//     } catch (error) {
-//         console.error('Error in PUT /tests/:id/publish:', error);
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// });
-
-// export default router;
-
-
+import Enrollment from '../models/enrollmentSchema.js'
 import express from 'express';
 import { auth, requireTeacher, requireStudent } from '../middlewares/auth.js';
 import { validateTest } from '../middlewares/validation.js';
@@ -308,13 +19,70 @@ import Question from '../models/Question.js';
 import Result from '../models/Result.js';
 // import { getActiveTests } from '../Controller/testController.js';
 const router = express.Router();
+import Subject from '../models/subject.js';
+router.post('/addSubject', requireTeacher, async (req, res) => {
+    try {
+        const teacher = req.user.id;
+        const { subject } = req.body;
 
-/* =====================================================
-   CREATE TEST (DRAFT)
-===================================================== */
+        if (!subject) {
+            console.log(subject)
+            return res.status(400).json({
+                message: 'Subject is required'
+            });
+        }
+
+        // check if teacher already has this subject
+        const existingSubject = await Subject.findOne({
+            name: subject,
+            teacher
+        });
+
+        if (existingSubject) {
+            return res.status(409).json({
+                message: 'You already teach this subject'
+            });
+        }
+        const generateCode = () =>
+            Math.floor(1000 + Math.random() * 9000).toString();
+
+        const MAX_RETRIES = 10;
+        let attempts = 0;
+        let sub;
+
+        while (!sub && attempts < MAX_RETRIES) {
+            attempts++;
+            try {
+                sub = await Subject.create({
+                    name: subject,
+                    teacher: teacher,
+                    code: generateCode()
+                });
+            } catch (err) {
+                if (err.code !== 11000) throw err;
+            }
+        }
+
+        if (!sub) {
+            throw new Error("Unable to generate unique teacher code");
+        }
+
+        return res.status(201).json({
+            message: 'Subject added successfully',
+            subject: sub
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+});
+
+
 router.post('/', auth, requireTeacher, validateTest, async (req, res) => {
     try {
-        console.log("hi0");
         const test = new Test({
             ...req.body, // title, description, duration, type
             status: 'draft',
@@ -330,40 +98,8 @@ router.post('/', auth, requireTeacher, validateTest, async (req, res) => {
     }
 });
 
-// export const getActiveTests = async (req, res) => {
-//     try {
-//         let query = { isActive: true };
-
-
-//         // API is intended for students only. If not student, return empty.
-//         if (req.user.role !== 'student') {
-
-//             return res.json([]);
-//         }
-
-
-//         const enrolled = req.user.enrolledTeachers || [];
-
-//         if (enrolled.length === 0) {
-
-//             return res.json([]);
-//         }
-//         query.createdBy = { $in: enrolled, };
-
-//         const tests = await Test.find(query)
-//             .populate('createdBy', 'name')
-//             .select('title description duration createdAt');
-
-//         res.json(tests);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-// };
 router.get('/fetch-active', auth, requireStudent, getActiveTests);
 
-/* =====================================================
-   GET MY TESTS (TEACHER)
-===================================================== */
 router.get('/my-tests', auth, requireTeacher, async (req, res) => {
     try {
         const tests = await Test.find({ createdBy: req.user.id })
@@ -375,10 +111,146 @@ router.get('/my-tests', auth, requireTeacher, async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
+router.get('/list-subjects', auth, requireTeacher, async (req, res) => {
+    try {
+        const subjects = await Subject.find({
+            teacher: req.user.id
+        })
+            .select('name code')
+            .sort({ createdAt: -1 });
 
-/* =====================================================
-   GET TEST BY ID
-===================================================== */
+        console.log(subjects)
+        res.status(200).json(subjects);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: 'Server error'
+        });
+    }
+});
+
+//subjectwise tests for teacher
+router.get('/subject/:id', auth, requireTeacher, async (req, res) => {
+    try {
+        const subjectId = req.params.id;
+
+        const query = {
+            createdBy: req.user.id
+        };
+
+        if (subjectId) {
+            query.subject = subjectId;
+        }
+
+        const tests = await Test.find(query)
+            .populate('questions')
+            .populate('subject', 'name')
+            .sort({ createdAt: -1 });
+
+        res.json(tests);
+
+    } catch (error) {
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
+
+router.get('/student/subject/:id', auth, requireStudent, async (req, res) => {
+    try {
+        const subjectId = req.params.id;
+        // 🔒 Only students
+        if (req.user.role !== "student") {
+
+            return res.json({ activeTests: [], expiredTests: [] });
+        }
+
+        /* --------------------------------------------------
+           1️⃣ Check enrollment (approved)
+        -------------------------------------------------- */
+        console.log(subjectId, req.user._id)
+        const isEnrolled = await Enrollment.find({
+            // student: req.user._id,
+            // subject: subjectId,
+            // status: "approved"
+        }).populate('subject', 'name');
+        console.log(isEnrolled, "enrolled")
+
+        if (!isEnrolled) {
+
+            return res.status(403).json({
+                message: "Not enrolled in this subject"
+            });
+        }
+
+        /* --------------------------------------------------
+           2️⃣ Student results
+        -------------------------------------------------- */
+        const results = await Result.find({
+            student: req.user._id
+        }).select("test status");
+        console.log(results)
+        const submittedTestIds = results
+            .filter(r => r.status === "submitted")
+            .map(r => r.test);
+
+        const inProgressTestIds = results
+            .filter(r => r.status === "started")
+            .map(r => r.test);
+        console.log("subject wise student", submittedTestIds, inProgressTestIds)
+        /* --------------------------------------------------
+           3️⃣ Fetch subject tests
+        -------------------------------------------------- */
+        const tests = await Test.find({
+            subject: subjectId,
+            status: "published",
+            $or: [
+                { _id: { $nin: submittedTestIds } },
+                { _id: { $in: inProgressTestIds } }
+            ]
+        })
+            .populate("createdBy", "name")
+            .populate("subject", "name")
+            .select(
+                "title description duration type startTime endTime createdAt status"
+            )
+            .sort({ createdAt: -1 });
+
+        /* --------------------------------------------------
+           4️⃣ Active / Expired logic
+        -------------------------------------------------- */
+        const now = Date.now();
+        const activeTests = [];
+        const expiredTests = [];
+
+        tests.forEach(test => {
+            let isActive = false;
+
+            {
+                const durationMs = test.duration * 60 * 1000;
+                const createdAtMs = new Date(test.createdAt).getTime();
+
+                if (now - createdAtMs <= durationMs) {
+                    isActive = true;
+                }
+            }
+
+            isActive ? activeTests.push(test) : expiredTests.push(test);
+        });
+
+        res.json({ activeTests, expiredTests });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Server error",
+            error: error.message
+        });
+    }
+});
 router.get('/:id', auth, async (req, res) => {
     try {
         const test = await Test.findById(req.params.id).populate('questions');
@@ -420,11 +292,6 @@ router.get('/:id', auth, async (req, res) => {
     }
 });
 
-// // Route to get active tests (Visible to students only)
-
-/* =====================================================
-   START TEST (STUDENT)
-===================================================== */
 const autoSubmit = async (result) => {
     try {
         // Populate questions
@@ -472,15 +339,6 @@ const autoSubmit = async (result) => {
         result.submittedAt = new Date();
 
         await result.save();
-
-        // End test only if self-paced
-        // const test = await Test.findById(result.test);
-        // if (test?.type === 'self_paced') {
-        //     test.status = 'ended';
-        //     test.endTime = new Date();
-        //     await test.save();
-        // }
-
         console.log(`✅ Auto-submitted test for student ${result.student}`);
 
     } catch (error) {
@@ -491,30 +349,29 @@ const autoSubmit = async (result) => {
 router.post('/:id/start', auth, requireStudent, async (req, res) => {
     try {
         const test = await Test.findById(req.params.id);
-        console.log(test);
 
         if (!test) {
             return res.status(404).json({ message: 'Test not found' });
         }
         const durationMs = test.duration * 60 * 1000;
         const createdAtMs = new Date(test.createdAt).getTime();
-        if (now - createdAtMs > durationMs) {
+        console.log(createdAtMs, durationMs)
+        if (Date.now() - createdAtMs > durationMs) {
+            console.log("expired")
             return res.status(403).json({ message: 'test expired' });
         }
+        console.log(test);
 
         // 🔒 Visibility rules
         if (test.status === 'draft' || test.status === 'ended') {
             return res.status(403).json({ message: 'Test not available' });
         }
-
-        // if (test.type === 'teacher_controlled') {
-        //     return res.status(403).json({ message: 'Test not live yet' });
-        // }
-
+        console.log(test._id)
         let result = await Result.findOne({
             test: test._id,
             student: req.user.id
         });
+        console.log("hii", result);
 
         if (result && !result.submittedAt) {
             const endTime = result.createdAt.getTime() + test.duration * 60 * 1000;
@@ -575,6 +432,7 @@ router.post('/:id/start', auth, requireStudent, async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             message: 'Server error',
             error: error.message
@@ -583,9 +441,6 @@ router.post('/:id/start', auth, requireStudent, async (req, res) => {
 });
 
 
-/* =====================================================
-   SUBMIT TEST (STUDENT)
-===================================================== */
 router.post('/:id/submit', auth, requireStudent, async (req, res) => {
     try {
         const { answers, timeTaken, autoSubmitted = false } = req.body;
@@ -594,6 +449,7 @@ router.post('/:id/submit', auth, requireStudent, async (req, res) => {
         if (!test) {
             return res.status(404).json({ message: 'Test not found' });
         }
+
 
         const result = await Result.findOne({
             test: test._id,
@@ -605,7 +461,9 @@ router.post('/:id/submit', auth, requireStudent, async (req, res) => {
         }
 
         if (result.submittedAt) {
-            return res.status(400).json({ message: 'Test already submitted' });
+            console.log(result)
+            console.log("already submitted")
+            return res.status(200).json({ message: 'Test already submitted' });
         }
 
         let score = 0;
@@ -649,16 +507,11 @@ router.post('/:id/submit', auth, requireStudent, async (req, res) => {
         result.timeTaken = timeTaken;
         result.autoSubmitted = autoSubmitted;
         result.submittedAt = new Date();
-
+        if (test.type === "teacher_controlled") {
+            test.status = "ended";
+            test.save();
+        }
         await result.save();
-
-        // 🔥 Only self-paced tests auto-end
-        // if (test.type === 'self_paced') {
-        //     test.status = 'ended';
-        //     test.endTime = new Date();
-        //     await test.save();
-        // }
-
         res.json({ message: 'Test submitted successfully' });
 
     } catch (error) {
@@ -669,9 +522,7 @@ router.post('/:id/submit', auth, requireStudent, async (req, res) => {
         });
     }
 });
-/* =====================================================
-   UPDATE TEST (TEACHER – DRAFT ONLY)
-===================================================== */
+
 router.put('/:id', auth, requireTeacher, async (req, res) => {
     try {
         const test = await Test.findById(req.params.id);
@@ -712,16 +563,13 @@ router.delete('/:id', auth, requireTeacher, async (req, res) => {
 
         await Test.findByIdAndDelete(req.params.id);
         await Result.deleteMany({ test: req.params.id });
-
+        console.log("delete")
         res.json({ message: 'Test deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
 
-/* =====================================================
-   PUBLISH TEST
-===================================================== */
 router.put('/:id/publish', auth, requireTeacher, async (req, res) => {
     try {
         console.log("hii");
@@ -747,9 +595,6 @@ router.put('/:id/publish', auth, requireTeacher, async (req, res) => {
     }
 });
 
-/* =====================================================
-   START LIVE TEST (TEACHER CONTROLLED)
-===================================================== */
 router.put('/:id/start-live', auth, requireTeacher, async (req, res) => {
     try {
         const test = await Test.findById(req.params.id);
@@ -771,9 +616,6 @@ router.put('/:id/start-live', auth, requireTeacher, async (req, res) => {
     }
 });
 
-/* =====================================================
-   END TEST
-===================================================== */
 router.put('/:id/end', auth, requireTeacher, async (req, res) => {
     try {
         const test = await Test.findById(req.params.id);

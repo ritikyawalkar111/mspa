@@ -23,26 +23,6 @@ const userSchema = new mongoose.Schema({
         enum: ['teacher', 'student'],
         required: true
     },
-    teacherCode: {
-        type: String,
-        unique: true,
-        sparse: true,
-        minlength: 4,
-        maxlength: 4
-    },
-    enrolledTeachers: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        default: []
-    }],
-    pendingStudents: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: []
-        }
-    ]
-    ,
     createdAt: {
         type: Date,
         default: Date.now
@@ -62,4 +42,5 @@ userSchema.methods.correctPassword = async function (candidatePassword, userPass
     return await bcrypt.compare(candidatePassword, userPassword);
 };
 
+// userSchema.index({email:1})
 export default mongoose.model('User', userSchema);

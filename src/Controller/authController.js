@@ -74,7 +74,7 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-
+        console.log("login")
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
@@ -83,6 +83,7 @@ export const login = async (req, res) => {
 
         const isMatch = await user.correctPassword(password, user.password);
         if (!isMatch) {
+            console.log("passwor")
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -100,7 +101,7 @@ export const login = async (req, res) => {
 
 
         res.cookie('token', accessToken, cookieOptions);
-
+        console.log("login successfull")
         res.json({
             message: 'Login successful',
             accessToken,
@@ -110,8 +111,6 @@ export const login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                teacherCode: user.teacherCode,
-                enrolledTeachers: user.enrolledTeachers
             }
         });
     } catch (error) {
@@ -186,8 +185,6 @@ export const refreshToken = async (req, res) => {
 
 export const getMe = async (req, res) => {
     const user = await User.findById(req.user.id)
-        .populate("pendingStudents", " name email")
-        .populate("enrolledTeachers", "name email");
 
     console.log("hiii", user);
 
@@ -196,10 +193,7 @@ export const getMe = async (req, res) => {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
-            teacherCode: user.teacherCode,
-            enrolledTeachers: user.enrolledTeachers,
-            pendingStudents: user.pendingStudents
+            role: user.role
         }
     });
 };

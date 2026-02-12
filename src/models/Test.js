@@ -1,6 +1,6 @@
 
 import mongoose from 'mongoose';
-
+import Subject from './subject.js';
 const testSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -13,6 +13,10 @@ const testSchema = new mongoose.Schema({
         trim: true
     },
 
+    subject: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject'
+    },
     questions: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Question'
@@ -23,16 +27,15 @@ const testSchema = new mongoose.Schema({
         required: true
     },
 
-    // 🔥 NEW FIELD
     type: {
         type: String,
         enum: ['teacher_controlled', 'self_paced'],
-        default: 'teacher_controlled'
+        default: 'self_paced'
     },
 
     status: {
         type: String,
-        enum: ['draft', 'published', 'live', 'ended'],
+        enum: ['draft', 'published', 'ended'],
         default: 'draft'
     },
 
@@ -55,5 +58,7 @@ const testSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+testSchema.index({ createdBy: 1 });
+testSchema.index({ createdBy: 1, status: 1 });
 
 export default mongoose.model('Test', testSchema);

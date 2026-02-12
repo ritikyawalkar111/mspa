@@ -5,9 +5,7 @@ import { auth, requireTeacher, requireStudent } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-/* =====================================================
-   GET ALL RESULTS FOR A TEST (TEACHER)
-===================================================== */
+
 router.get('/test/:testId', auth, requireTeacher, async (req, res) => {
     try {
         const test = await Test.findById(req.params.testId);
@@ -32,9 +30,7 @@ router.get('/test/:testId', auth, requireTeacher, async (req, res) => {
     }
 });
 
-/* =====================================================
-   GET MY RESULTS (STUDENT)
-===================================================== */
+
 router.get('/my-results', auth, requireStudent, async (req, res) => {
     try {
         const results = await Result.find({
@@ -52,8 +48,6 @@ router.get('/my-results', auth, requireStudent, async (req, res) => {
             .select('-answers') // hide answers list view
             .sort({ submittedAt: -1 });
 
-
-        
         console.log(results);
         res.json(results);
     } catch (error) {
@@ -61,9 +55,45 @@ router.get('/my-results', auth, requireStudent, async (req, res) => {
     }
 });
 
-/* =====================================================
-   GET SINGLE RESULT DETAILS
-===================================================== */
+
+router.get('/subject/:id/my-results', auth, requireStudent, async (req, res) => {
+    try {
+        const subjectId = req.params.id;
+        console.log(subjectId)
+        if (!subjectId) {
+            return res.status(500).json({ msg: "provide subject id" });
+        }
+        const results = await Result.find({
+            student: req.user.id,
+            submittedAt: { $ne: null }
+        })
+            .populate({
+                path: 'test',
+                match: subjectId ? { subject: subjectId } : {},
+                select: 'title description duration type status subject createdBy startTime endTime',
+                populate: {
+                    path: 'createdBy',
+                    select: 'name'
+                }
+            })
+            .select('-answers')
+            .sort({ submittedAt: -1 });
+
+        // remove results where test didn't match subject filter
+        const filteredResults = subjectId
+            ? results.filter(r => r.test !== null)
+            : results;
+
+        res.json(filteredResults);
+
+    } catch (error) {
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
+    }
+});
+
 router.get('/:id', auth, async (req, res) => {
     try {
         const result = await Result.findById(req.params.id)

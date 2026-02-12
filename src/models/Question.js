@@ -51,5 +51,6 @@ const questionSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+// questionSchema.index({ createdBy: 1 });
 
 export default mongoose.model('Question', questionSchema);

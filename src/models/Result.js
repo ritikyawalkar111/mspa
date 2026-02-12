@@ -58,5 +58,7 @@ const resultSchema = new mongoose.Schema({
 
 // Ensure one student can only have one result per test
 resultSchema.index({ test: 1, student: 1 }, { unique: true });
+resultSchema.index({ student: 1 });
+resultSchema.index({ test: 1, status: 1 });
 
 export default mongoose.model('Result', resultSchema);

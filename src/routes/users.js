@@ -4,114 +4,173 @@ import { enrollTeacher } from '../Controller/userController.js';
 import { requireStudent, requireTeacher } from '../middlewares/auth.js';
 const router = express.Router();
 import User from '../models/User.js';
+import Subject from '../models/subject.js';
+import Enrollment from "../models/enrollmentSchema.js";
 router.post('/enroll', requireStudent, enrollTeacher);
 router.post('/request', requireStudent, async (req, res) => {
     try {
-        console.log("aldskjfajk");
-
         const studentId = req.user.id;
         const { code } = req.body;
-        const user = req.user;
+
         if (!code || code.length !== 4) {
-            return res.status(400).json({ message: 'Invalid 4-digit code' });
+            return res.status(400).json({ message: 'Invalid subject code' });
         }
 
-        const teacher = await User.findOne({ teacherCode: code, role: 'teacher' });
-        if (req.user.role !== 'student') {
-            return res.status(403).json({ message: 'Only students can enroll' });
+        // Find subject by code
+        const subject = await Subject.findOne({ code }).populate('teacher');
+
+        if (!subject) {
+            return res.status(404).json({ message: 'Subject not found' });
         }
-        if (!teacher || teacher.role !== "teacher") {
-            return res.status(404).json({ message: "Teacher not found" });
+        console.log("in subject")
+        // Create enrollment (unique index handles duplicates)
+        const exist = await Enrollment.findOne({
+            student: studentId,
+            subject: subject._id
+        });
+        
+        if (exist) {
+            console.log(exist);
+            return res.status(400).json({
+                msg: "already exist"
+            })
         }
-
-        if (teacher.pendingStudents?.includes(studentId)) {
-            return res.status(400).json({ message: "Request already sent" });
-        }
-
-        if (user.enrolledTeachers.includes(teacher._id)) {
-            return res.status(401).json({ message: "already enrolled" });
-        }
-        console.log("aldskjfajk");
-        teacher.pendingStudents = teacher.pendingStudents || [];
-        teacher.pendingStudents.push(studentId);
-
-        await teacher.save();
-        res.status(200).json({ message: "Request sent successfully" });
-    } catch (err) {
-        res.status(500).json({ message: "Server error" });
-    }
-});
-
-router.post("/accept", requireTeacher, async (req, res) => {
-    try {
-        const teacherId = req.user._id;
-        const { studentId } = req.body;
-
-        const teacher = await User.findById(teacherId);
-        const student = await User.findById(studentId);
-
-        if (!teacher || teacher.role !== "teacher") {
-            return res.status(403).json({ message: "Not authorized" });
-        }
-
-        if (!student || student.role !== "student") {
-            return res.status(404).json({ message: "Student not found" });
-        }
-
-        // Remove from pending list
-        teacher.pendingStudents = teacher.pendingStudents?.filter(
-            (id) => id.toString() !== studentId
-        );
-
-        // Add teacher to student's enrolledTeachers
-        if (!student.enrolledTeachers.includes(teacherId)) {
-            student.enrolledTeachers.push(teacherId);
-        }
-
-        await teacher.save();
-        await student.save();
+        const enrollment = await Enrollment.create({
+            student: studentId,
+            subject: subject._id
+        });
 
         res.status(200).json({
-            message: "Student accepted successfully",
+            message: 'Enrollment request sent',
+            enrollment
         });
+
     } catch (err) {
-        res.status(500).json({ message: "Server error" });
+        if (err.code === 11000) {
+            return res.status(400).json({
+                message: 'You have already requested/enrolled in this subject'
+            });
+        }
+
+        res.status(500).json({ message: 'Server error' });
     }
-
 });
 
-router.post("/reject", requireTeacher, async (req, res) => {
-    const teacherId = req.user.id;
-    const { studentId } = req.body;
+router.post('/accept', requireTeacher, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+        const { enrollmentId } = req.body;
+        console.log(enrollmentId)
 
-    const teacher = await User.findById(teacherId);
+        const enrollment = await Enrollment.findById(enrollmentId)
+            .populate('subject', 'name teacher code');
 
-    teacher.pendingStudents = teacher.pendingStudents.filter(
-        (id) => id.toString() !== studentId
-    );
+        if (!enrollment) {
+            return res.status(404).json({ message: 'Enrollment not found' });
+        }
 
-    await teacher.save();
+        if (enrollment.subject.teacher.toString() !== teacherId) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
 
-    res.json({ message: "Student rejected" });
+        enrollment.status = 'approved';
+        await enrollment.save();
+
+        res.status(200).json({
+            message: 'Student accepted successfully'
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
-// router.get("/pending", requireTeacher, async (req, res) => {
-//     try {
-//         const teacherId = req.user.id;
+router.post('/reject', requireTeacher, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+        const { enrollmentId } = req.body;
 
-//         // Ensure teacher
-//         const teacher = await User.findById(teacherId)
-//             .populate("pendingStudents", "name email rollNo");
+        const enrollment = await Enrollment.findById(enrollmentId)
+            .populate('subject');
 
-//         if (!teacher || teacher.role !== "teacher") {
-//             return res.status(403).json({ message: "Not authorized" });
-//         }
+        if (!enrollment) {
+            return res.status(404).json({ message: 'Enrollment not found' });
+        }
 
-//         res.status(200).json({
-//             pendingStudents: teacher.pendingStudents,
-//         });
-//     } catch (err) {
-//         res.status(500).json({ message: "Server error" });
-//     }
-// });
+        if (enrollment.subject.teacher.toString() !== teacherId) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        enrollment.status = 'rejected';
+        await enrollment.save();
+
+        res.status(200).json({
+            message: 'Student rejected'
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/pending', requireTeacher, async (req, res) => {
+    try {
+        const teacherId = req.user.id;
+
+        const pendingEnrollments = await Enrollment.find({ status: 'pending' })
+            .populate({
+                path: 'subject',
+                match: { teacher: teacherId },
+                select: 'name'
+            })
+            .populate('student', 'name email rollNo');
+
+        // remove null subjects (not teacher’s)
+        const filtered = pendingEnrollments.filter(e => e.subject);
+
+        res.status(200).json(filtered);
+
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+router.get("/enrollments", requireStudent, async (req, res) => {
+    try {
+        const student = req.user.id;
+
+        const requested = await Enrollment.find({
+            student,
+            status: "pending"
+        }).populate({
+            path: "subject",
+            select: "name teacher",
+            populate: {
+                path: "teacher",
+                select: "name"
+            }
+        });
+
+        const enrolled = await Enrollment.find({
+            student,
+            status: "approved"
+        }).populate({
+            path: "subject",
+            select: "name teacher",
+            populate: {
+                path: "teacher",
+                select: "name"
+            }
+        });
+
+
+        console.log("enrolled")
+        return res.status(200).json({
+            requested,
+            enrolled
+        });
+    } catch (e) {
+        return res.status(500).json({ msg: e.message });
+    }
+});
+
 export default router;

@@ -11,9 +11,9 @@
 // };
 
 const validateTest = (req, res, next) => {
-    const { title, duration, type } = req.body;
+    const { title, duration, type, subject } = req.body;
     console.log(req.body);
-    if (!title || !duration || !type) {
+    if (!title || !duration || !type || !subject) {
         return res.status(400).json({
             message: 'Title and duration are required'
         });

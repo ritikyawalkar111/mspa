@@ -106,7 +106,9 @@ export const Register_verifyOtp = async (req, res) => {
     if (!email || !userOtp) {
       return res.status(400).json({ message: 'Provide email and OTP' });
     }
-
+    // if (role === 'teacher' && !subject) {
+    //   return res.status(400).json({ message: "provide subject as well" })
+    // }
     let user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: 'User already exists' });
@@ -130,23 +132,9 @@ export const Register_verifyOtp = async (req, res) => {
     if (String(otp) !== String(userOtp)) {
       return res.status(401).json({ message: "Invalid OTP" });
     }
-
     removeOTP(email); // Clear OTP after success
-
-    if (role === 'teacher') {
-      let isUnique = false;
-      let code;
-      while (!isUnique) {
-        code = Math.floor(1000 + Math.random() * 9000).toString();
-        const existingUser = await User.findOne({ teacherCode: code });
-        if (!existingUser) isUnique = true;
-      }
-      user = new User({ name, email, password, role, teacherCode: code });
-    } else {
-      user = new User({ name, email, password, role });
-    }
-
-    await user.save();
+    user = new User({ name, email, password, role });
+    // await user.save();/
 
 
     const payload = { id: user.id };
@@ -163,7 +151,7 @@ export const Register_verifyOtp = async (req, res) => {
 
     res.cookie('token', accessToken, cookieOptions);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'User registered successfully',
       accessToken,
       refreshToken,
@@ -173,13 +161,13 @@ export const Register_verifyOtp = async (req, res) => {
         email: user.email,
 
         role: user.role,
-        teacherCode: user.teacherCode,
-        enrolledTeachers: user.enrolledTeachers
+        // teacherCode: user.teacherCode,
+        // enrolledTeachers: user.enrolledTeachers
       }
     });
   } catch (error) {
     console.error("Registration Error:", error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

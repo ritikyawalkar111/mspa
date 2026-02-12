@@ -28,6 +28,7 @@ const auth = async (req, res, next) => {
         }
 
         req.user = user;
+        // console.log(req.user)
         next();
     } catch (error) {
         res.clearCookie('token');
@@ -36,6 +37,7 @@ const auth = async (req, res, next) => {
 };
 
 const requireTeacher = (req, res, next) => {
+    // console.log(req.user);
     if (req.user.role !== 'teacher') {
         return res.status(403).json({ message: 'Access denied. Teacher role required.' });
     }
