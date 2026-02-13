@@ -17,6 +17,7 @@ import { validateTest } from '../middlewares/validation.js';
 import Test from '../models/Test.js';
 import Question from '../models/Question.js';
 import Result from '../models/Result.js';
+import mongoose from 'mongoose';
 // import { getActiveTests } from '../Controller/testController.js';
 const router = express.Router();
 import Subject from '../models/subject.js';
@@ -160,7 +161,7 @@ router.get('/subject/:id', auth, requireTeacher, async (req, res) => {
 router.get("/subject/:id/students", auth, requireTeacher, async (req, res) => {
     try {
         const subjectId = req.params.id;
-
+        console.log(subjectId)
         // 1️⃣ Verify subject belongs to this teacher
         const subject = await Subject.findOne({
             _id: subjectId,
@@ -202,7 +203,7 @@ router.delete(
         try {
             const { subjectId, studentId } = req.params;
 
-            // 1️⃣ Verify subject belongs to this teacher
+            // 1️⃣ Verify teacher owns subject
             const subject = await Subject.findOne({
                 _id: subjectId,
                 teacher: req.user.id,
@@ -214,7 +215,17 @@ router.delete(
                 });
             }
 
-            // 2️⃣ Delete enrollment
+            // 2️⃣ Get all test IDs of this subject
+            const tests = await Test.find({ subject: subjectId }).select("_id");
+            const testIds = tests.map(t => t._id);
+
+            // 3️⃣ Delete student's results for those tests
+            await Result.deleteMany({
+                test: { $in: testIds },
+                student: studentId,
+            });
+
+            // 4️⃣ Delete enrollment
             const enrollment = await Enrollment.findOneAndDelete({
                 subject: subjectId,
                 student: studentId,
@@ -227,8 +238,9 @@ router.delete(
             }
 
             return res.status(200).json({
-                message: "Student removed successfully",
+                message: "Student removed and related results deleted",
             });
+
         } catch (error) {
             console.error("REMOVE STUDENT ERROR:", error);
             return res.status(500).json({
@@ -361,7 +373,7 @@ router.get('/student/subject/:id', auth, requireStudent, async (req, res) => {
             .populate("subject", "name")
             .select(
                 "title description duration type startTime endTime createdAt status"
-            ) 
+            )
             .sort({ createdAt: -1 });
 
         /* --------------------------------------------------
@@ -763,6 +775,7 @@ router.put('/:id/start-live', auth, requireTeacher, async (req, res) => {
 
 router.put('/:id/end', auth, requireTeacher, async (req, res) => {
     try {
+        console.log(req.params.id);
         const test = await Test.findById(req.params.id);
         if (!test) return res.status(404).json({ message: 'Test not found' });
 

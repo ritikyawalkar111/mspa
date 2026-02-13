@@ -13,6 +13,7 @@ import resultRoutes from './routes/results.js';
 import userRoutes from './routes/users.js';
 import dash from "./routes/dashboard.js";
 import { auth } from './middlewares/auth.js';
+import User from './models/User.js';
 const app = express();
 const server = http.createServer(app);
 
@@ -35,7 +36,8 @@ app.use(cors({
     origin: [
         "http://localhost:8081",
         "http://192.168.44.70:8081",
-        "http://10.73.47.192:8081"
+        "http://10.73.47.192:8081",
+        "https://mspa-1.onrender.com"
     ],
     credentials: true
 }));
@@ -97,6 +99,19 @@ io.on('connection', (socket) => {
     socket.on('end-test', ({ testId }) => {
         io.to(testId).emit('end-test');
         liveTests.delete(testId);
+    });
+
+    socket.on("join-test", async ({ testId }) => {
+        console.log(socket.user.id, "user")
+        const student = await User.findById(socket.user.id);
+        console.log(student)
+        socket.join(testId);
+
+        io.to(testId).emit("student-joined", {
+            _id: student.id,
+            name: student.name,
+            submitted: false
+        });
     });
 
     socket.on('disconnect', () => {
