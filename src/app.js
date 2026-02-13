@@ -22,7 +22,8 @@ const io = new Server(server, {
         origin: [
             "http://localhost:8081",
             "http://192.168.44.70:8081",
-            "http://10.73.47.192:8081"
+            "http://10.73.47.192:8081",
+            "https://mspa-1.onrender.com"
         ],
         methods: ["GET", "POST"],
         credentials: true

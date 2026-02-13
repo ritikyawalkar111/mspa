@@ -105,7 +105,6 @@ router.get('/my-tests', auth, requireTeacher, async (req, res) => {
         const tests = await Test.find({ createdBy: req.user.id })
             .populate('questions')
             .sort({ createdAt: -1 });
-
         res.json(tests);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -158,6 +157,152 @@ router.get('/subject/:id', auth, requireTeacher, async (req, res) => {
     }
 });
 
+router.get("/subject/:id/students", auth, requireTeacher, async (req, res) => {
+    try {
+        const subjectId = req.params.id;
+
+        // 1️⃣ Verify subject belongs to this teacher
+        const subject = await Subject.findOne({
+            _id: subjectId,
+            teacher: req.user.id,
+        });
+
+        if (!subject) {
+            return res.status(404).json({
+                message: "Subject not found or unauthorized",
+            });
+        }
+
+        // 2️⃣ Get approved enrollments + populate student details
+        const enrollments = await Enrollment.find({
+            subject: subjectId,
+            status: "approved",
+        }).populate("student", "name email role");
+
+        // 3️⃣ Extract only students
+        const students = enrollments.map((enroll) => enroll.student);
+
+        return res.status(200).json({
+            totalStudents: students.length,
+            students,
+        });
+    } catch (error) {
+        console.error("GET STUDENTS ERROR:", error);
+        return res.status(500).json({
+            message: "Server Error",
+        });
+    }
+});
+
+router.delete(
+    "/subject/:subjectId/students/:studentId",
+    auth,
+    requireTeacher,
+    async (req, res) => {
+        try {
+            const { subjectId, studentId } = req.params;
+
+            // 1️⃣ Verify subject belongs to this teacher
+            const subject = await Subject.findOne({
+                _id: subjectId,
+                teacher: req.user.id,
+            });
+
+            if (!subject) {
+                return res.status(404).json({
+                    message: "Subject not found or unauthorized",
+                });
+            }
+
+            // 2️⃣ Delete enrollment
+            const enrollment = await Enrollment.findOneAndDelete({
+                subject: subjectId,
+                student: studentId,
+            });
+
+            if (!enrollment) {
+                return res.status(404).json({
+                    message: "Student not enrolled in this subject",
+                });
+            }
+
+            return res.status(200).json({
+                message: "Student removed successfully",
+            });
+        } catch (error) {
+            console.error("REMOVE STUDENT ERROR:", error);
+            return res.status(500).json({
+                message: "Server Error",
+            });
+        }
+    }
+);
+
+router.delete("/subject/:id", auth, requireTeacher, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const subjectId = req.params.id;
+
+        // 1️⃣ Verify subject belongs to teacher
+        const subject = await Subject.findOne({
+            _id: subjectId,
+            teacher: req.user.id,
+        }).session(session);
+
+        if (!subject) {
+            await session.abortTransaction();
+            return res.status(404).json({
+                message: "Subject not found or unauthorized",
+            });
+        }
+
+        // 2️⃣ Get all tests of this subject
+        const tests = await Test.find({ subject: subjectId }).session(session);
+        const testIds = tests.map((t) => t._id);
+
+        // 3️⃣ Delete results of those tests
+        await Result.deleteMany({
+            test: { $in: testIds },
+        }).session(session);
+
+        await Question.deleteMany({
+            _id: { $in: tests.flatMap(t => t.questions) }
+        }).session(session);
+
+        // 4️⃣ Delete tests
+        await Test.deleteMany({
+            subject: subjectId,
+        }).session(session);
+
+        // 5️⃣ Delete enrollments
+        await Enrollment.deleteMany({
+            subject: subjectId,
+        }).session(session);
+
+        // 6️⃣ Delete subject
+        await Subject.findByIdAndDelete(subjectId).session(session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(200).json({
+            message: "Subject and all related data deleted successfully",
+        });
+
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+
+        console.error("DELETE SUBJECT ERROR:", error);
+        return res.status(500).json({
+            message: "Server Error",
+        });
+    }
+}
+);
+
 
 router.get('/student/subject/:id', auth, requireStudent, async (req, res) => {
     try {
@@ -173,9 +318,9 @@ router.get('/student/subject/:id', auth, requireStudent, async (req, res) => {
         -------------------------------------------------- */
         console.log(subjectId, req.user._id)
         const isEnrolled = await Enrollment.find({
-            // student: req.user._id,
-            // subject: subjectId,
-            // status: "approved"
+            student: req.user._id,
+            subject: subjectId,
+            status: "approved"
         }).populate('subject', 'name');
         console.log(isEnrolled, "enrolled")
 
@@ -216,7 +361,7 @@ router.get('/student/subject/:id', auth, requireStudent, async (req, res) => {
             .populate("subject", "name")
             .select(
                 "title description duration type startTime endTime createdAt status"
-            )
+            ) 
             .sort({ createdAt: -1 });
 
         /* --------------------------------------------------
