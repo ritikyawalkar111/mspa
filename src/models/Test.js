@@ -1,64 +1,64 @@
-
-import mongoose from 'mongoose';
-import Subject from './subject.js';
+import mongoose from "mongoose";
 const testSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
-        trim: true
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  description: {
+    type: String,
+    trim: true,
+  },
+
+  subject: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Subject",
+  },
+  questions: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
     },
+  ],
 
-    description: {
-        type: String,
-        trim: true
-    },
+  duration: {
+    type: Number, // minutes
+    required: true,
+  },
 
-    subject: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subject'
-    },
-    questions: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Question'
-    }],
+  type: {
+    type: String,
+    enum: ["teacher_controlled", "self_paced"],
+    default: "self_paced",
+  },
 
-    duration: {
-        type: Number, // minutes
-        required: true
-    },
+  status: {
+    type: String,
+    enum: ["draft", "published", "live", "ended"],
+    default: "draft",
+  },
 
-    type: {
-        type: String,
-        enum: ['teacher_controlled', 'self_paced'],
-        default: 'self_paced'
-    },
+  currentQuestionIndex: {
+    type: Number,
+    default: 0,
+  },
 
-    status: {
-        type: String,
-        enum: ['draft', 'published', 'ended'],
-        default: 'draft'
-    },
+  startTime: Date,
+  endTime: Date,
 
-    currentQuestionIndex: {
-        type: Number,
-        default: 0
-    },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
 
-    startTime: Date,
-    endTime: Date,
-
-    createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 testSchema.index({ createdBy: 1 });
 testSchema.index({ createdBy: 1, status: 1 });
 
-export default mongoose.model('Test', testSchema);
+export default mongoose.model("Test", testSchema);
