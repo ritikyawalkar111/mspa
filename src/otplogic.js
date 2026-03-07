@@ -34,12 +34,12 @@ transporter.verify(function (error, success) {
 });
 
 // ===== GENERATE OTP =====
-export const generateOtp = (): number => {
+export const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000);
 };
 
 // ===== SEND OTP EMAIL =====
-export const sendOtpMail = async (email: string, otp: number): Promise<boolean> => {
+export const sendOtpMail = async (email, otp) => {
   console.log("Sending OTP to:", email);
   console.log("OTP:", otp);
 
