@@ -24,7 +24,7 @@ export const generateOtp = () => {
 
 // Send OTP email
 export const sendOtpMail = async (email, otp) => {
-  console.log("MAIL_PASS:", process.env.MAIL_PASS ? "Loaded" : "Missing");
+  console.log("MAIL_PASS:", process.env.MAIL_PASS);
 
   try {
     await transporter.sendMail({
