@@ -5,11 +5,17 @@ dotenv.config();
 
 // Setup mail transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: 'smtp.gmail.com',
+    port: 587,           // non-SSL port
+    secure: false,
   auth: {
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
   },
+ tls: {
+        rejectUnauthorized: false
+    },
+    family: 4 
 });
 
 // Generate a random 3-digit OTP
