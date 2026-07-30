@@ -58,12 +58,12 @@ export const sendOtp = async (req, res) => {
     console.log(otp)
     // Save OTP and send mail
     await saveOTP(email, String(otp));
-    console.log("problem in step 1").
+    console.log("problem in step 1");
     const sent = await sendOtpMail(email, otp);
     if(!sent){
       return res.status(500).json({message:"otp not sent"})
     }
-    console.log("otp sent")
+    console.log("otp sent");
     return res.status(200).json({ message: "OTP sent successfully" });
 
   } catch (error) {
