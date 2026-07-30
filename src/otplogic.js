@@ -24,7 +24,7 @@ transporter.verify((err, success) => {
   }
 });
 
-export async function sendOtpMail(email: string, otp: number) {
+export async function sendOtpMail(email, otp) {
   try {
     console.log("Sending mail...");
     console.log("MAIL_USER:", process.env.MAIL_USER);
